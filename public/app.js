@@ -227,8 +227,8 @@ function render() {
                 <div class="main-content">
                     <div class="room-setup">
                         <h2>${t('setup.title', lang)}</h2>
-                        <button class="btn btn-primary" onclick="showCreateRoom()" title="${t('common.create', lang)}"><i class="fas fa-plus-circle"></i></button>
-                        <button class="btn btn-secondary" onclick="showJoinRoom()" title="${t('common.join', lang)}"><i class="fas fa-sign-in-alt"></i></button>
+                        <button class="btn btn-primary" onclick="showCreateRoom()"><i class="fas fa-plus-circle"></i> ${t('common.create', lang)}</button>
+                        <button class="btn btn-secondary" onclick="showJoinRoom()"><i class="fas fa-sign-in-alt"></i> ${t('common.join', lang)}</button>
                         
                         ${roomsList.length > 0 ? `
                             <div style="margin-top: 30px;">
@@ -347,7 +347,7 @@ function render() {
                                     <option value="zh" ${lang === 'zh' ? 'selected' : ''}>${t('lang.zh', lang)}</option>
                                 </select>
                             </div>
-                            <button class="btn btn-secondary" onclick="leaveRoom()" style="margin: 0;" title="${t('common.leave', lang)}"><i class="fas fa-sign-out-alt"></i></button>
+                            <button class="btn btn-secondary" onclick="leaveRoom()" style="margin: 0;"><i class="fas fa-sign-out-alt"></i> ${t('common.leave', lang)}</button>
                         </div>
                     </div>
                 </div>
@@ -465,7 +465,7 @@ function renderMessage(msg) {
                 <span class="message-username">${msg.username}</span>
                 <span class="message-time">${timeStr}</span>
                 <div class="countdown-circle" id="countdown-${msg.id}">
-                    <svg width="40" height="40" class="countdown-svg">
+                    <svg class="countdown-svg" viewBox="0 0 40 40">
                         <circle cx="20" cy="20" r="18" class="countdown-bg"></circle>
                         <circle cx="20" cy="20" r="18" class="countdown-progress" 
                                 stroke-dasharray="${circumference}" 
@@ -540,8 +540,8 @@ function showRoomInfoModal(roomCode, password, lang) {
                         <label>${t('create.roomCodeLabel', lang)}</label>
                         <div class="info-value-box">
                             <span class="info-value" id="roomCodeValue">${roomCode}</span>
-                            <button class="copy-btn" id="copyRoomCode" onclick="copyToClipboard('${roomCode}', 'copyRoomCode')">
-                                <i class="fas fa-copy"></i> ${t('common.copy', lang)}
+                            <button class="copy-btn" id="copyRoomCode" onclick="copyToClipboard('${roomCode}', 'copyRoomCode')" title="${t('common.copy', lang)}">
+                                <i class="fas fa-copy"></i>
                             </button>
                         </div>
                     </div>
@@ -549,8 +549,8 @@ function showRoomInfoModal(roomCode, password, lang) {
                         <label>${t('create.passwordLabel2', lang)}</label>
                         <div class="info-value-box">
                             <span class="info-value" id="passwordValue">${password}</span>
-                            <button class="copy-btn" id="copyPassword" onclick="copyToClipboard('${password}', 'copyPassword')">
-                                <i class="fas fa-copy"></i> ${t('common.copy', lang)}
+                            <button class="copy-btn" id="copyPassword" onclick="copyToClipboard('${password}', 'copyPassword')" title="${t('common.copy', lang)}">
+                                <i class="fas fa-copy"></i>
                             </button>
                         </div>
                     </div>
@@ -1119,16 +1119,16 @@ window.viewQR = async function() {
             const modal = document.createElement('div');
             modal.className = 'modal-overlay';
             modal.innerHTML = `
-                <div class="modal-content" style="max-width: 400px;">
+                <div class="modal-content qr-modal-content">
                     <div class="modal-header">
                         <h3><i class="fas fa-qrcode"></i> ${t('common.viewQR', lang)}</h3>
                         <button class="modal-close" onclick="this.closest('.modal-overlay').remove()"><i class="fas fa-times"></i></button>
                     </div>
-                    <div class="modal-body" style="text-align: center; padding: 20px;">
-                        <div style="display: flex; justify-content: center; margin-bottom: 15px;">
-                            <img src="${data.qrCode}" alt="QR Code" style="max-width: 100%; max-width: 300px; height: auto; border-radius: 8px; border: 1px solid #E1E8ED;">
+                    <div class="modal-body qr-modal-body">
+                        <div class="qr-image-container">
+                            <img src="${data.qrCode}" alt="QR Code" class="qr-modal-image">
                         </div>
-                        <p style="margin-top: 15px; color: #666; font-size: 14px;">${t('common.qrExpiresIn', lang)} <span id="qrModalCountdown"></span></p>
+                        <p class="qr-expires-text">${t('common.qrExpiresIn', lang)} <span id="qrModalCountdown"></span></p>
                     </div>
                 </div>
             `;
@@ -1211,8 +1211,8 @@ function showPasswordModal(password, lang) {
                         <label>${t('common.password', lang)}</label>
                         <div class="info-value-box">
                             <span class="info-value" id="passwordValueModal">${password}</span>
-                            <button class="copy-btn" id="copyPasswordModal" onclick="copyToClipboard('${password}', 'copyPasswordModal')">
-                                <i class="fas fa-copy"></i> ${t('common.copy', lang)}
+                            <button class="copy-btn" id="copyPasswordModal" onclick="copyToClipboard('${password}', 'copyPasswordModal')" title="${t('common.copy', lang)}">
+                                <i class="fas fa-copy"></i>
                             </button>
                         </div>
                     </div>
