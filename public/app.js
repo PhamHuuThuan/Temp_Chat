@@ -7,7 +7,8 @@ let state = {
     autoDelete: '1h',
     socket: null,
     deviceToken: null,
-    isOwner: false
+    isOwner: false,
+    userCount: 0
 };
 
 // Initialize device token
@@ -337,7 +338,7 @@ function render() {
                     <div class="header-top">
                         <div>
                             <h1>${t('chat.title', lang)} ${state.roomCode}</h1>
-                            <p>${t('chat.autoDeleteAfter', lang)} ${getAutoDeleteLabel(state.autoDelete)}</p>
+                            <p>${t('chat.autoDeleteAfter', lang)} ${getAutoDeleteLabel(state.autoDelete)} <span class="user-count-badge"><i class="fas fa-users"></i> ${state.userCount || 0}</span></p>
                         </div>
                         <div style="display: flex; gap: 15px; align-items: center;">
                             <div class="language-selector">
@@ -925,6 +926,7 @@ window.createRoom = async function() {
             state.autoDelete = data.autoDelete;
             state.username = generateRandomName();
             state.isOwner = true; // Người tạo phòng là owner
+            state.userCount = data.userCount || 1;
             
             // Lưu token và room info vào localStorage
             saveUserRoom(data.token, data.roomCode, {
@@ -980,6 +982,7 @@ window.joinRoom = async function() {
             state.autoDelete = data.autoDelete;
             state.username = generateRandomName();
             state.isOwner = data.isOwner || false;
+            state.userCount = data.userCount || 0;
             
             // Lưu token và room info vào localStorage
             saveUserRoom(data.token, roomCode, {
@@ -1007,6 +1010,16 @@ function connectToRoom() {
             roomCode: state.roomCode,
             token: state.token,
             username: state.username
+        });
+        
+        // Load messages và start countdown timers
+        const messages = loadMessages(state.roomCode);
+        messages.forEach(msg => {
+            const deleteTime = AUTO_DELETE_TIMES[msg.autoDelete] || AUTO_DELETE_TIMES['1h'];
+            const expiresAt = msg.timestamp + deleteTime;
+            if (expiresAt > Date.now()) {
+                startMessageCountdown(msg.id, msg.timestamp, msg.autoDelete);
+            }
         });
         
         state.currentView = 'chat';
@@ -1043,27 +1056,28 @@ function connectToRoom() {
                 startMessageCountdown(messageData.id, messageData.timestamp, messageData.autoDelete);
             }
         }
-        
-        // Auto delete after time (backup)
-        setTimeout(() => {
-            const msgElement = document.querySelector(`[data-id="${messageData.id}"]`);
-            if (msgElement) {
-                msgElement.remove();
-            }
-            // Xóa file data khi message hết hạn
-            deleteFileData(messageData.id);
-            cleanupMessages(state.roomCode);
-        }, AUTO_DELETE_TIMES[messageData.autoDelete] || AUTO_DELETE_TIMES['1h']);
     });
     
     state.socket.on('user-joined', (data) => {
         const lang = getCurrentLanguage();
+        if (data.userCount !== undefined) {
+            state.userCount = data.userCount;
+        }
         showStatus(`${data.username} ${t('chat.userJoined', lang)}`, 'info');
+        if (state.currentView === 'chat') {
+            render();
+        }
     });
     
     state.socket.on('user-left', (data) => {
         const lang = getCurrentLanguage();
+        if (data.userCount !== undefined) {
+            state.userCount = data.userCount;
+        }
         showStatus(`${data.username} ${t('chat.userLeft', lang)}`, 'info');
+        if (state.currentView === 'chat') {
+            render();
+        }
     });
     
     state.socket.on('error', (data) => {
@@ -1450,28 +1464,12 @@ function startMessageCountdown(messageId, timestamp, autoDelete) {
     updateCountdown();
 }
 
-// Auto cleanup messages periodically
+// Auto cleanup messages periodically - chỉ cleanup, không re-render để tránh làm dừng countdown
 setInterval(() => {
     if (state.roomCode) {
         cleanupMessages(state.roomCode);
-        if (state.currentView === 'chat') {
-            const messagesDiv = document.getElementById('messages');
-            if (messagesDiv) {
-                const messages = loadMessages(state.roomCode);
-                messagesDiv.innerHTML = messages.map(msg => renderMessage(msg)).join('');
-                messagesDiv.scrollTop = messagesDiv.scrollHeight;
-                
-                // Restart countdown timers for all messages (clear old timers first)
-                activeCountdowns.clear();
-                messages.forEach(msg => {
-                    const deleteTime = AUTO_DELETE_TIMES[msg.autoDelete] || AUTO_DELETE_TIMES['1h'];
-                    const expiresAt = msg.timestamp + deleteTime;
-                    if (expiresAt > Date.now()) {
-                        startMessageCountdown(msg.id, msg.timestamp, msg.autoDelete);
-                    }
-                });
-            }
-        }
+        // Không re-render messages ở đây để tránh làm dừng countdown timers
+        // Countdown timers sẽ tự động update và xóa message khi hết hạn
     }
 }, 60000); // Check every minute
 
@@ -1549,6 +1547,7 @@ window.joinRoomFromURL = async function(roomCode, password) {
             state.autoDelete = data.autoDelete;
             state.username = generateRandomName();
             state.isOwner = data.isOwner || false;
+            state.userCount = data.userCount || 0;
             
             saveUserRoom(data.token, roomCode.toUpperCase(), {
                 autoDelete: data.autoDelete,

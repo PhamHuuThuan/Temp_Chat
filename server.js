@@ -122,7 +122,8 @@ app.post('/api/rooms/create', async (req, res) => {
       roomCode,
       password: roomPassword,
       token: userToken,
-      autoDelete
+      autoDelete,
+      userCount: 1 // Owner là user đầu tiên
     });
   } catch (error) {
     console.error('Error creating room:', error);
@@ -176,7 +177,8 @@ app.post('/api/rooms/join', async (req, res) => {
       token: userToken,
       roomCode,
       autoDelete: room.autoDelete,
-      isOwner
+      isOwner,
+      userCount: room.users ? room.users.length : 0
     });
   } catch (error) {
     console.error('Error joining room:', error);
@@ -414,9 +416,14 @@ io.on('connection', (socket) => {
       socket.token = token;
       socket.username = username || generateRandomName();
       
-      socket.to(roomCode).emit('user-joined', {
+      // Get current user count
+      const userCount = room.users ? room.users.length : 0;
+      
+      // Emit to all users in room including the new joiner
+      io.to(roomCode).emit('user-joined', {
         username: socket.username,
-        timestamp: Date.now()
+        timestamp: Date.now(),
+        userCount: userCount
       });
     } catch (error) {
       console.error('Error in join-room:', error);
@@ -447,12 +454,30 @@ io.on('connection', (socket) => {
     }
   });
   
-  socket.on('disconnect', () => {
+  socket.on('disconnect', async () => {
     if (socket.roomCode) {
-      socket.to(socket.roomCode).emit('user-left', {
-        username: socket.username,
-        timestamp: Date.now()
-      });
+      try {
+        const room = await Room.findOne({ roomCode: socket.roomCode.toUpperCase() });
+        if (room) {
+          // Remove user from room
+          if (room.users && room.users.includes(socket.token)) {
+            room.users = room.users.filter(t => t !== socket.token);
+            await room.save();
+          }
+          
+          // Get updated user count
+          const userCount = room.users ? room.users.length : 0;
+          
+          // Emit to remaining users
+          socket.to(socket.roomCode).emit('user-left', {
+            username: socket.username,
+            timestamp: Date.now(),
+            userCount: userCount
+          });
+        }
+      } catch (error) {
+        console.error('Error in disconnect:', error);
+      }
     }
     console.log('User disconnected:', socket.id);
   });

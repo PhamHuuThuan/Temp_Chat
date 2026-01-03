@@ -1,4 +1,4 @@
-module.exports = {
+gigitmodule.exports = {
   apps: [{
     name: 'temp-message',
     script: 'server.js',
