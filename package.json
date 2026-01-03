@@ -1,0 +1,31 @@
+{
+  "name": "temp-message",
+  "version": "1.0.0",
+  "description": "Temporary messaging web server with auto-delete",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js",
+    "pm2:start": "pm2 start ecosystem.config.js",
+    "pm2:stop": "pm2 stop temp-message",
+    "pm2:restart": "pm2 restart temp-message",
+    "pm2:logs": "pm2 logs temp-message"
+  },
+  "keywords": ["messaging", "temporary", "chat"],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.18.2",
+    "socket.io": "^4.6.1",
+    "cors": "^2.8.5",
+    "uuid": "^9.0.0",
+    "jsonwebtoken": "^9.0.2",
+    "crypto": "^1.0.1",
+    "qrcode": "^1.5.3",
+    "mongoose": "^8.0.3"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  }
+}
+
