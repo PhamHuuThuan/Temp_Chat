@@ -382,6 +382,7 @@ function render() {
                                 <input type="text" id="messageInput" placeholder="${t('chat.messagePlaceholder', lang)}" onkeypress="handleKeyPress(event)">
                                 <div class="file-input-wrapper">
                                     <input type="file" id="fileInput" onchange="handleFileSelect(event)">
+                                    <label for="fileInput" class="file-input-label"><i class="fas fa-paperclip"></i></label>
                                 </div>
                                 <button class="btn btn-primary" onclick="sendMessage()" title="${t('common.send', lang)}"><i class="fas fa-paper-plane"></i></button>
                             </div>
