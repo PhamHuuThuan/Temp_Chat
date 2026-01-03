@@ -210,7 +210,7 @@ function render() {
                     <div class="header-top">
                         <div>
                             <h1><i class="fas fa-comments"></i> ${t('app.title', lang)}</h1>
-                            <p>${t('app.subtitle', lang)}</p>
+                            <p>${t('app.subtitle', lang)} <a href="#" onclick="showTerms(); return false;" style="color: #4A90E2; text-decoration: none; font-size: 12px; margin-left: 10px;">${t('common.terms', lang)}</a></p>
                         </div>
                         <div class="language-selector">
                             <select id="languageSelect" onchange="changeLanguage(this.value)">
@@ -226,6 +226,7 @@ function render() {
                         <h2>${t('setup.title', lang)}</h2>
                         <button class="btn btn-primary" onclick="showCreateRoom()"><i class="fas fa-plus-circle"></i> ${t('common.create', lang)}</button>
                         <button class="btn btn-secondary" onclick="showJoinRoom()"><i class="fas fa-sign-in-alt"></i> ${t('common.join', lang)}</button>
+                        <button class="btn btn-secondary" onclick="showQRScanner()" style="margin-top: 10px;"><i class="fas fa-qrcode"></i> ${t('common.scanQR', lang)}</button>
                         
                         ${roomsList.length > 0 ? `
                             <div style="margin-top: 30px;">
@@ -318,6 +319,11 @@ function render() {
                             <input type="text" id="joinPassword" placeholder="${t('join.passwordPlaceholder', lang)}" maxlength="6" pattern="[0-9]*">
                         </div>
                         <button class="btn btn-primary" onclick="joinRoom()"><i class="fas fa-sign-in-alt"></i> ${t('join.button', lang)}</button>
+                        <div style="text-align: center; margin: 20px 0;">
+                            <div style="border-top: 1px solid #E1E8ED; padding-top: 20px;">
+                                <button class="btn btn-secondary" onclick="showQRScanner()"><i class="fas fa-qrcode"></i> ${t('common.scanQR', lang)}</button>
+                            </div>
+                        </div>
                         <button class="btn btn-secondary" onclick="backToSetup()"><i class="fas fa-arrow-left"></i> ${t('common.back', lang)}</button>
                     </div>
                 </div>
@@ -562,6 +568,152 @@ window.showCreateRoom = function() {
 window.showJoinRoom = function() {
     state.currentView = 'join';
     render();
+};
+
+window.showQRScanner = function() {
+    const lang = getCurrentLanguage();
+    
+    // Tạo modal cho QR scanner
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    modal.innerHTML = `
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="modal-header">
+                <h3><i class="fas fa-qrcode"></i> ${t('common.scanQR', lang)}</h3>
+                <button class="modal-close" onclick="this.closest('.modal-overlay').remove()"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body">
+                <p style="margin-bottom: 20px; color: #666;">${t('common.scanQRInstruction', lang)}</p>
+                <div id="qr-scanner-container" style="text-align: center;">
+                    <video id="qr-video" width="100%" style="max-width: 400px; border-radius: 8px; background: #000;"></video>
+                    <canvas id="qr-canvas" style="display: none;"></canvas>
+                </div>
+                <div style="margin-top: 20px;">
+                    <input type="text" id="qr-manual-input" placeholder="${t('common.orEnterURL', lang)}" style="width: 100%; padding: 12px; border: 1px solid #E1E8ED; border-radius: 8px; font-size: 14px;">
+                    <button class="btn btn-primary" onclick="processQRInput()" style="width: 100%; margin-top: 10px;"><i class="fas fa-check"></i> ${t('common.join', lang)}</button>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    
+    // Thử sử dụng camera để quét QR (nếu có)
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+            .then(stream => {
+                const video = document.getElementById('qr-video');
+                video.srcObject = stream;
+                video.play();
+                
+                // Sử dụng jsQR library nếu có, hoặc chỉ cho phép nhập thủ công
+                // Vì không có library, chúng ta sẽ chỉ cho phép nhập URL thủ công
+            })
+            .catch(err => {
+                console.log('Camera access denied or not available');
+                document.getElementById('qr-video').style.display = 'none';
+            });
+    } else {
+        document.getElementById('qr-video').style.display = 'none';
+    }
+    
+    // Cleanup khi đóng modal
+    modal.querySelector('.modal-close').addEventListener('click', () => {
+        const video = document.getElementById('qr-video');
+        if (video && video.srcObject) {
+            video.srcObject.getTracks().forEach(track => track.stop());
+        }
+        modal.remove();
+    });
+};
+
+window.processQRInput = function() {
+    const input = document.getElementById('qr-manual-input');
+    const url = input.value.trim();
+    
+    if (!url) {
+        const lang = getCurrentLanguage();
+        showStatus(t('common.pleaseEnterURL', lang), 'error');
+        return;
+    }
+    
+    // Parse URL để lấy room code và password
+    let roomCode = null;
+    let password = null;
+    
+    try {
+        // Thử parse như URL đầy đủ
+        const urlObj = new URL(url);
+        roomCode = urlObj.searchParams.get('room');
+        password = urlObj.searchParams.get('password');
+    } catch (e) {
+        // Nếu không phải URL hợp lệ, thử parse trực tiếp từ string
+        const match = url.match(/[?&]room=([A-Z0-9]+).*[&]?password=(\d{6})/i);
+        if (match) {
+            roomCode = match[1];
+            password = match[2];
+        } else {
+            // Thử parse từ format khác
+            const match2 = url.match(/room=([A-Z0-9]+).*password=(\d{6})/i);
+            if (match2) {
+                roomCode = match2[1];
+                password = match2[2];
+            }
+        }
+    }
+    
+    if (roomCode && password) {
+        // Đóng modal
+        const modal = document.querySelector('.modal-overlay');
+        if (modal) {
+            const video = document.getElementById('qr-video');
+            if (video && video.srcObject) {
+                video.srcObject.getTracks().forEach(track => track.stop());
+            }
+            modal.remove();
+        }
+        // Join room
+        window.joinRoomFromURL(roomCode, password);
+    } else {
+        const lang = getCurrentLanguage();
+        showStatus(t('common.invalidQRURL', lang), 'error');
+    }
+};
+
+window.showTerms = function() {
+    const lang = getCurrentLanguage();
+    
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    modal.innerHTML = `
+        <div class="modal-content" style="max-width: 700px; max-height: 80vh; overflow-y: auto;">
+            <div class="modal-header">
+                <h3><i class="fas fa-file-contract"></i> ${t('terms.title', lang)}</h3>
+                <button class="modal-close" onclick="this.closest('.modal-overlay').remove()"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body" style="text-align: left; line-height: 1.6;">
+                <h4>${t('terms.section1.title', lang)}</h4>
+                <p>${t('terms.section1.content', lang)}</p>
+                
+                <h4>${t('terms.section2.title', lang)}</h4>
+                <p>${t('terms.section2.content', lang)}</p>
+                
+                <h4>${t('terms.section3.title', lang)}</h4>
+                <p>${t('terms.section3.content', lang)}</p>
+                
+                <h4>${t('terms.section4.title', lang)}</h4>
+                <p>${t('terms.section4.content', lang)}</p>
+                
+                <h4>${t('terms.section5.title', lang)}</h4>
+                <p>${t('terms.section5.content', lang)}</p>
+                
+                <h4>${t('terms.section6.title', lang)}</h4>
+                <p>${t('terms.section6.content', lang)}</p>
+                
+                <p style="margin-top: 20px; font-size: 12px; color: #666;">${t('terms.lastUpdated', lang)}</p>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
 };
 
 window.backToSetup = function() {
@@ -1128,8 +1280,28 @@ setInterval(() => {
 // Check URL params for auto join
 function checkURLParams() {
     const urlParams = new URLSearchParams(window.location.search);
-    const roomCode = urlParams.get('room');
-    const password = urlParams.get('password');
+    let roomCode = urlParams.get('room');
+    let password = urlParams.get('password');
+    
+    // Nếu không có trong query params, thử parse từ hash hoặc path
+    if (!roomCode || !password) {
+        const hash = window.location.hash;
+        const match = hash.match(/room=([A-Z0-9]+).*password=(\d{6})/i);
+        if (match) {
+            roomCode = match[1];
+            password = match[2];
+        }
+    }
+    
+    // Nếu vẫn không có, thử parse từ toàn bộ URL
+    if (!roomCode || !password) {
+        const fullUrl = window.location.href;
+        const match = fullUrl.match(/[?&#]room=([A-Z0-9]+).*[&#]password=(\d{6})/i);
+        if (match) {
+            roomCode = match[1];
+            password = match[2];
+        }
+    }
     
     if (roomCode && password) {
         // Auto join room from URL

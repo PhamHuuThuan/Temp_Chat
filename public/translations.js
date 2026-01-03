@@ -2,14 +2,14 @@
 const translations = {
     vi: {
         // Common
-        'app.title': '💬 Temp Message',
+        'app.title': 'Temp Message',
         'app.subtitle': 'Nhắn tin tạm thời - Tự động xóa',
         'common.create': 'Tạo phòng mới',
         'common.join': 'Tham gia phòng',
         'common.back': 'Quay lại',
         'common.leave': 'Rời phòng',
         'common.send': 'Gửi',
-        'common.file': '📎 File',
+        'common.file': 'File',
         'common.copy': 'Sao chép',
         'common.copied': 'Đã sao chép!',
         'common.roomCode': 'Mã phòng',
@@ -25,13 +25,19 @@ const translations = {
         'common.no': 'Không',
         'common.qrExpiresIn': 'QR hết hạn sau:',
         'common.seconds': 'giây',
+        'common.scanQR': 'Quét QR Code',
+        'common.scanQRInstruction': 'Quét QR code hoặc nhập URL để tham gia phòng',
+        'common.orEnterURL': 'Hoặc nhập URL từ QR code',
+        'common.pleaseEnterURL': 'Vui lòng nhập URL',
+        'common.invalidQRURL': 'URL không hợp lệ',
+        'common.terms': 'Điều khoản',
         
         // Setup
         'setup.title': 'Chọn hành động',
         'setup.roomsList': 'Phòng đã tham gia:',
         
         // Create room
-        'create.title': '💬 Tạo phòng mới',
+        'create.title': 'Tạo phòng mới',
         'create.autoDeleteLabel': 'Thời gian tự động xóa:',
         'create.passwordLabel': 'Mật khẩu (để trống để tự động tạo):',
         'create.passwordPlaceholder': '6 chữ số',
@@ -42,7 +48,7 @@ const translations = {
         'create.shareInfo': 'Chia sẻ thông tin này để người khác tham gia:',
         
         // Join room
-        'join.title': '💬 Tham gia phòng',
+        'join.title': 'Tham gia phòng',
         'join.roomCodeLabel': 'Mã phòng:',
         'join.roomCodePlaceholder': 'Nhập mã phòng',
         'join.passwordLabel': 'Mật khẩu:',
@@ -50,7 +56,7 @@ const translations = {
         'join.button': 'Tham gia',
         
         // Chat
-        'chat.title': '💬 Phòng:',
+        'chat.title': 'Phòng:',
         'chat.autoDeleteAfter': 'Tự động xóa sau:',
         'chat.messagePlaceholder': 'Nhập tin nhắn...',
         'chat.processingFile': 'Đang xử lý file...',
@@ -77,18 +83,34 @@ const translations = {
         // Language
         'lang.vi': 'Tiếng Việt',
         'lang.en': 'English',
-        'lang.zh': '中文'
+        'lang.zh': '中文',
+        
+        // Terms
+        'terms.title': 'Điều khoản sử dụng',
+        'terms.section1.title': '1. Chấp nhận điều khoản',
+        'terms.section1.content': 'Bằng việc sử dụng dịch vụ này, bạn đồng ý với các điều khoản và điều kiện được nêu trong tài liệu này. Nếu bạn không đồng ý, vui lòng không sử dụng dịch vụ.',
+        'terms.section2.title': '2. Mục đích sử dụng',
+        'terms.section2.content': 'Dịch vụ này được cung cấp để người dùng có thể gửi tin nhắn tạm thời và tự động xóa. Bạn không được sử dụng dịch vụ cho mục đích bất hợp pháp, gây hại, hoặc vi phạm quyền của người khác.',
+        'terms.section3.title': '3. Quyền riêng tư',
+        'terms.section3.content': 'Tin nhắn và file được lưu trữ cục bộ trên thiết bị của người dùng và tự động xóa theo thời gian đã thiết lập. Chúng tôi không lưu trữ nội dung tin nhắn trên server. Chỉ thông tin phòng và token được lưu trữ trong database.',
+        'terms.section4.title': '4. Trách nhiệm người dùng',
+        'terms.section4.content': 'Bạn chịu trách nhiệm về nội dung bạn gửi và đảm bảo không vi phạm pháp luật. Chúng tôi không chịu trách nhiệm về nội dung do người dùng tạo ra.',
+        'terms.section5.title': '5. Từ chối trách nhiệm',
+        'terms.section5.content': 'Dịch vụ được cung cấp "như hiện tại" mà không có bảo đảm nào. Chúng tôi không đảm bảo dịch vụ sẽ luôn hoạt động không gián đoạn hoặc không có lỗi.',
+        'terms.section6.title': '6. Thay đổi điều khoản',
+        'terms.section6.content': 'Chúng tôi có quyền thay đổi các điều khoản này bất cứ lúc nào. Việc tiếp tục sử dụng dịch vụ sau khi thay đổi được coi là chấp nhận các điều khoản mới.',
+        'terms.lastUpdated': 'Cập nhật lần cuối: ' + new Date().toLocaleDateString('vi-VN')
     },
     en: {
         // Common
-        'app.title': '💬 Temp Message',
+        'app.title': 'Temp Message',
         'app.subtitle': 'Temporary messaging - Auto delete',
         'common.create': 'Create Room',
         'common.join': 'Join Room',
         'common.back': 'Back',
         'common.leave': 'Leave Room',
         'common.send': 'Send',
-        'common.file': '📎 File',
+        'common.file': 'File',
         'common.copy': 'Copy',
         'common.copied': 'Copied!',
         'common.roomCode': 'Room Code',
@@ -104,6 +126,12 @@ const translations = {
         'common.no': 'No',
         'common.qrExpiresIn': 'QR expires in:',
         'common.seconds': 'seconds',
+        'common.scanQR': 'Scan QR Code',
+        'common.scanQRInstruction': 'Scan QR code or enter URL to join room',
+        'common.orEnterURL': 'Or enter URL from QR code',
+        'common.pleaseEnterURL': 'Please enter URL',
+        'common.invalidQRURL': 'Invalid QR URL',
+        'common.terms': 'Terms',
         
         // Setup
         'setup.title': 'Choose an action',
@@ -161,18 +189,34 @@ const translations = {
         // Language
         'lang.vi': 'Tiếng Việt',
         'lang.en': 'English',
-        'lang.zh': '中文'
+        'lang.zh': '中文',
+        
+        // Terms
+        'terms.title': 'Terms of Service',
+        'terms.section1.title': '1. Acceptance of Terms',
+        'terms.section1.content': 'By using this service, you agree to the terms and conditions outlined in this document. If you do not agree, please do not use the service.',
+        'terms.section2.title': '2. Purpose of Use',
+        'terms.section2.content': 'This service is provided for users to send temporary messages that auto-delete. You may not use the service for illegal purposes, to cause harm, or to violate others\' rights.',
+        'terms.section3.title': '3. Privacy',
+        'terms.section3.content': 'Messages and files are stored locally on users\' devices and automatically deleted according to the set time. We do not store message content on the server. Only room information and tokens are stored in the database.',
+        'terms.section4.title': '4. User Responsibility',
+        'terms.section4.content': 'You are responsible for the content you send and must ensure it does not violate laws. We are not responsible for user-generated content.',
+        'terms.section5.title': '5. Disclaimer',
+        'terms.section5.content': 'The service is provided "as is" without any warranties. We do not guarantee the service will always operate without interruption or errors.',
+        'terms.section6.title': '6. Changes to Terms',
+        'terms.section6.content': 'We reserve the right to change these terms at any time. Continued use of the service after changes constitutes acceptance of the new terms.',
+        'terms.lastUpdated': 'Last updated: ' + new Date().toLocaleDateString('en-US')
     },
     zh: {
         // Common
-        'app.title': '💬 临时消息',
+        'app.title': '临时消息',
         'app.subtitle': '临时消息 - 自动删除',
         'common.create': '创建房间',
         'common.join': '加入房间',
         'common.back': '返回',
         'common.leave': '离开房间',
         'common.send': '发送',
-        'common.file': '📎 文件',
+        'common.file': '文件',
         'common.copy': '复制',
         'common.copied': '已复制！',
         'common.roomCode': '房间代码',
@@ -188,13 +232,18 @@ const translations = {
         'common.no': '否',
         'common.qrExpiresIn': '二维码过期时间:',
         'common.seconds': '秒',
+        'common.scanQR': '扫描二维码',
+        'common.scanQRInstruction': '扫描二维码或输入URL加入房间',
+        'common.orEnterURL': '或输入来自二维码的URL',
+        'common.pleaseEnterURL': '请输入URL',
+        'common.invalidQRURL': '无效的QR URL',
         
         // Setup
         'setup.title': '选择操作',
         'setup.roomsList': '已加入的房间:',
         
         // Create room
-        'create.title': '💬 创建新房间',
+        'create.title': '创建新房间',
         'create.autoDeleteLabel': '自动删除时间:',
         'create.passwordLabel': '密码（留空自动生成）:',
         'create.passwordPlaceholder': '6位数字',
@@ -205,7 +254,7 @@ const translations = {
         'create.shareInfo': '分享此信息供他人加入:',
         
         // Join room
-        'join.title': '💬 加入房间',
+        'join.title': '加入房间',
         'join.roomCodeLabel': '房间代码:',
         'join.roomCodePlaceholder': '输入房间代码',
         'join.passwordLabel': '密码:',
@@ -213,7 +262,7 @@ const translations = {
         'join.button': '加入',
         
         // Chat
-        'chat.title': '💬 房间:',
+        'chat.title': '房间:',
         'chat.autoDeleteAfter': '自动删除时间:',
         'chat.messagePlaceholder': '输入消息...',
         'chat.processingFile': '正在处理文件...',
@@ -245,13 +294,29 @@ const translations = {
         // Language
         'lang.vi': 'Tiếng Việt',
         'lang.en': 'English',
-        'lang.zh': '中文'
+        'lang.zh': '中文',
+        
+        // Terms
+        'terms.title': '使用条款',
+        'terms.section1.title': '1. 接受条款',
+        'terms.section1.content': '使用本服务即表示您同意本文档中概述的条款和条件。如果您不同意，请不要使用本服务。',
+        'terms.section2.title': '2. 使用目的',
+        'terms.section2.content': '本服务用于用户发送自动删除的临时消息。您不得将服务用于非法目的、造成伤害或侵犯他人权利。',
+        'terms.section3.title': '3. 隐私',
+        'terms.section3.content': '消息和文件存储在用户设备的本地，并根据设置的时间自动删除。我们不在服务器上存储消息内容。只有房间信息和令牌存储在数据库中。',
+        'terms.section4.title': '4. 用户责任',
+        'terms.section4.content': '您对发送的内容负责，必须确保不违反法律。我们不对用户生成的内容负责。',
+        'terms.section5.title': '5. 免责声明',
+        'terms.section5.content': '服务按"原样"提供，不提供任何保证。我们不保证服务将始终无中断或无错误地运行。',
+        'terms.section6.title': '6. 条款变更',
+        'terms.section6.content': '我们保留随时更改这些条款的权利。变更后继续使用服务即表示接受新条款。',
+        'terms.lastUpdated': '最后更新: ' + new Date().toLocaleDateString('zh-CN')
     }
 };
 
 // Translation function
 function t(key, lang = null) {
-    const currentLang = lang || (localStorage.getItem('language') || 'vi');
+    const currentLang = lang || (localStorage.getItem('language') || 'en');
     return translations[currentLang]?.[key] || key;
 }
 
@@ -265,6 +330,6 @@ function setLanguage(lang) {
 
 // Get current language
 function getCurrentLanguage() {
-    return localStorage.getItem('language') || 'vi';
+    return localStorage.getItem('language') || 'en';
 }
 
