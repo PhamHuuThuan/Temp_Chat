@@ -59,16 +59,28 @@ npm run dev
 
 Server sẽ chạy tại `http://localhost:3000`
 
-### 5. Deploy lên VPS (tùy chọn)
+### 5. Deploy lên VPS
 
 ```bash
-# Setup VPS lần đầu
-scp -i ~/.ssh/gcloud_key setup-vps.sh user@vps:~/setup-vps.sh
-ssh -i ~/.ssh/gcloud_key user@vps "chmod +x ~/setup-vps.sh && ~/setup-vps.sh"
-
-# Upload files và deploy
+# 1. Upload files lên VPS
 scp -i ~/.ssh/gcloud_key -r * user@vps:~/temp-message/
-ssh -i ~/.ssh/gcloud_key user@vps "cd ~/temp-message && npm install && docker-compose up -d && pm2 start server.js --name temp-message"
+
+# 2. SSH vào VPS và chạy setup (chỉ lần đầu)
+ssh -i ~/.ssh/gcloud_key user@vps
+cd ~/temp-message
+chmod +x setup.sh
+./setup.sh
+
+# 3. Nếu Docker vừa được cài, logout và login lại
+exit
+ssh -i ~/.ssh/gcloud_key user@vps
+
+# 4. Cài đặt dependencies và chạy
+cd ~/temp-message
+npm install
+docker-compose up -d
+pm2 start ecosystem.config.js
+pm2 save
 ```
 
 ## Cấu trúc
