@@ -254,22 +254,22 @@ app.get('/api/rooms/:roomCode/qr', async (req, res) => {
     
     // Kiểm tra QR code có hết hạn không
     if (!room.qrCode || !room.qrCode.expiresAt || new Date(room.qrCode.expiresAt).getTime() < now) {
-      // Tạo QR code mới
-      const qrData = JSON.stringify({
-        roomCode: roomCode,
-        password: room.password,
-        timestamp: now
-      });
+      // Tạo QR code mới với URL để quét được từ app bên ngoài
+      const protocol = req.protocol || 'http';
+      const host = req.get('host') || 'localhost:3000';
+      const joinUrl = `${protocol}://${host}/?room=${roomCode}&password=${room.password}`;
       
       try {
-        const qrImage = await QRCode.toDataURL(qrData, {
+        const qrImage = await QRCode.toDataURL(joinUrl, {
           width: 300,
-          margin: 2
+          margin: 2,
+          errorCorrectionLevel: 'M'
         });
         
         room.qrCode = {
           data: qrImage,
-          expiresAt: new Date(now + QR_EXPIRY)
+          expiresAt: new Date(now + QR_EXPIRY),
+          url: joinUrl
         };
         await room.save();
       } catch (error) {
@@ -280,6 +280,7 @@ app.get('/api/rooms/:roomCode/qr', async (req, res) => {
     const expiresAt = new Date(room.qrCode.expiresAt).getTime();
     res.json({
       qrCode: room.qrCode.data,
+      url: room.qrCode.url,
       expiresAt: expiresAt,
       expiresIn: Math.max(0, expiresAt - now)
     });

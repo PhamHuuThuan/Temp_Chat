@@ -9,7 +9,8 @@ let state = {
     deviceToken: null,
     isOwner: false,
     qrCode: null,
-    qrExpiresAt: null
+    qrExpiresAt: null,
+    qrUrl: null
 };
 
 // Initialize device token
@@ -99,10 +100,18 @@ function deleteFileData(fileId) {
     sessionStorage.removeItem(`file_${fileId}`);
 }
 
-// Save message to localStorage
+// Save message to localStorage (check duplicate by ID)
 function saveMessage(roomCode, message) {
     const key = `messages_${roomCode}`;
     const messages = loadMessages(roomCode);
+    
+    // Kiểm tra duplicate bằng message ID
+    const existingIndex = messages.findIndex(msg => msg.id === message.id);
+    if (existingIndex >= 0) {
+        // Message đã tồn tại, không lưu lại
+        return;
+    }
+    
     messages.push(message);
     localStorage.setItem(key, JSON.stringify(messages));
     
@@ -200,7 +209,7 @@ function render() {
                 <div class="header">
                     <div class="header-top">
                         <div>
-                            <h1>${t('app.title', lang)}</h1>
+                            <h1><i class="fas fa-comments"></i> ${t('app.title', lang)}</h1>
                             <p>${t('app.subtitle', lang)}</p>
                         </div>
                         <div class="language-selector">
@@ -215,12 +224,12 @@ function render() {
                 <div class="main-content">
                     <div class="room-setup">
                         <h2>${t('setup.title', lang)}</h2>
-                        <button class="btn btn-primary" onclick="showCreateRoom()">${t('common.create', lang)}</button>
-                        <button class="btn btn-secondary" onclick="showJoinRoom()">${t('common.join', lang)}</button>
+                        <button class="btn btn-primary" onclick="showCreateRoom()"><i class="fas fa-plus-circle"></i> ${t('common.create', lang)}</button>
+                        <button class="btn btn-secondary" onclick="showJoinRoom()"><i class="fas fa-sign-in-alt"></i> ${t('common.join', lang)}</button>
                         
                         ${roomsList.length > 0 ? `
                             <div style="margin-top: 30px;">
-                                <h3 style="margin-bottom: 15px; color: #333;">${t('setup.roomsList', lang)}</h3>
+                                <h3 style="margin-bottom: 15px; color: #333;"><i class="fas fa-door-open"></i> ${t('setup.roomsList', lang)}</h3>
                                 <div class="rooms-list">
                                     ${roomsList.map(room => `
                                         <div class="room-item" onclick="rejoinRoom('${room.roomCode}', '${room.token}')">
@@ -248,7 +257,7 @@ function render() {
                 <div class="header">
                     <div class="header-top">
                         <div>
-                            <h1>${t('create.title', lang)}</h1>
+                            <h1><i class="fas fa-plus-circle"></i> ${t('create.title', lang)}</h1>
                         </div>
                         <div class="language-selector">
                             <select id="languageSelect" onchange="changeLanguage(this.value)">
@@ -274,8 +283,8 @@ function render() {
                             <label>${t('create.passwordLabel', lang)}</label>
                             <input type="text" id="password" placeholder="${t('create.passwordPlaceholder', lang)}" maxlength="6" pattern="[0-9]*">
                         </div>
-                        <button class="btn btn-primary" onclick="createRoom()">${t('create.button', lang)}</button>
-                        <button class="btn btn-secondary" onclick="backToSetup()">${t('common.back', lang)}</button>
+                        <button class="btn btn-primary" onclick="createRoom()"><i class="fas fa-plus"></i> ${t('create.button', lang)}</button>
+                        <button class="btn btn-secondary" onclick="backToSetup()"><i class="fas fa-arrow-left"></i> ${t('common.back', lang)}</button>
                     </div>
                 </div>
             </div>
@@ -287,7 +296,7 @@ function render() {
                 <div class="header">
                     <div class="header-top">
                         <div>
-                            <h1>${t('join.title', lang)}</h1>
+                            <h1><i class="fas fa-sign-in-alt"></i> ${t('join.title', lang)}</h1>
                         </div>
                         <div class="language-selector">
                             <select id="languageSelect" onchange="changeLanguage(this.value)">
@@ -308,8 +317,8 @@ function render() {
                             <label>${t('join.passwordLabel', lang)}</label>
                             <input type="text" id="joinPassword" placeholder="${t('join.passwordPlaceholder', lang)}" maxlength="6" pattern="[0-9]*">
                         </div>
-                        <button class="btn btn-primary" onclick="joinRoom()">${t('join.button', lang)}</button>
-                        <button class="btn btn-secondary" onclick="backToSetup()">${t('common.back', lang)}</button>
+                        <button class="btn btn-primary" onclick="joinRoom()"><i class="fas fa-sign-in-alt"></i> ${t('join.button', lang)}</button>
+                        <button class="btn btn-secondary" onclick="backToSetup()"><i class="fas fa-arrow-left"></i> ${t('common.back', lang)}</button>
                     </div>
                 </div>
             </div>
@@ -346,26 +355,27 @@ function render() {
                             <div class="chat-header-right">
                                 ${state.isOwner ? `
                                     <button class="btn btn-owner" onclick="viewPassword()" title="${t('common.viewPassword', lang)}">
-                                        🔑 ${t('common.viewPassword', lang)}
+                                        <i class="fas fa-key"></i> ${t('common.viewPassword', lang)}
                                     </button>
                                     <button class="btn btn-owner" onclick="viewQR()" title="${t('common.viewQR', lang)}">
-                                        📱 ${t('common.viewQR', lang)}
+                                        <i class="fas fa-qrcode"></i> ${t('common.viewQR', lang)}
                                     </button>
                                     <button class="btn btn-danger" onclick="deleteRoom()" title="${t('common.deleteRoom', lang)}">
-                                        🗑️ ${t('common.deleteRoom', lang)}
+                                        <i class="fas fa-trash"></i> ${t('common.deleteRoom', lang)}
                                     </button>
                                 ` : ''}
-                                <button class="leave-btn" onclick="leaveRoom()">${t('common.leave', lang)}</button>
+                                <button class="leave-btn" onclick="leaveRoom()"><i class="fas fa-sign-out-alt"></i> ${t('common.leave', lang)}</button>
                             </div>
                         </div>
                         ${state.qrCode ? `
                             <div class="qr-display" id="qrDisplay">
                                 <div class="qr-header">
-                                    <h4>${t('common.viewQR', lang)}</h4>
-                                    <button class="qr-close" onclick="closeQR()">×</button>
+                                    <h4><i class="fas fa-qrcode"></i> ${t('common.viewQR', lang)}</h4>
+                                    <button class="qr-close" onclick="closeQR()"><i class="fas fa-times"></i></button>
                                 </div>
                                 <div class="qr-content">
                                     <img src="${state.qrCode}" alt="QR Code" class="qr-image">
+                                    ${state.qrUrl ? `<p style="margin: 12px 0; font-size: 12px; color: #666; word-break: break-all;">${state.qrUrl}</p>` : ''}
                                     <p class="qr-expires" id="qrExpires">${t('common.qrExpiresIn', lang)} <span id="qrCountdown"></span></p>
                                 </div>
                             </div>
@@ -379,9 +389,9 @@ function render() {
                                 <input type="text" id="messageInput" placeholder="${t('chat.messagePlaceholder', lang)}" onkeypress="handleKeyPress(event)">
                                 <div class="file-input-wrapper">
                                     <input type="file" id="fileInput" onchange="handleFileSelect(event)">
-                                    <label for="fileInput" class="file-input-label">${t('common.file', lang)}</label>
+                                    <label for="fileInput" class="file-input-label"><i class="fas fa-paperclip"></i> ${t('common.file', lang)}</label>
                                 </div>
-                                <button class="btn btn-primary" onclick="sendMessage()">${t('common.send', lang)}</button>
+                                <button class="btn btn-primary" onclick="sendMessage()"><i class="fas fa-paper-plane"></i> ${t('common.send', lang)}</button>
                             </div>
                             <div id="fileInfo"></div>
                         </div>
@@ -421,12 +431,12 @@ function renderMessage(msg) {
                 fileContent = `<div class="message-file"><video controls><source src="${dataUrl}" type="${msg.fileInfo.mimetype}"></video></div>`;
             } else {
                 // Tạo download link từ data URL
-                fileContent = `<div class="message-file"><a href="${dataUrl}" class="file-link" download="${msg.fileInfo.originalName}">📎 ${msg.fileInfo.originalName} (${formatFileSize(msg.fileInfo.size)})</a></div>`;
+                fileContent = `<div class="message-file"><a href="${dataUrl}" class="file-link" download="${msg.fileInfo.originalName}"><i class="fas fa-paperclip"></i> ${msg.fileInfo.originalName} (${formatFileSize(msg.fileInfo.size)})</a></div>`;
             }
         } else {
             // File data đã bị mất (có thể do refresh trang - sessionStorage bị xóa)
             const lang = getCurrentLanguage();
-            fileContent = `<div class="message-file"><div class="file-info">📎 ${msg.fileInfo.originalName} (${formatFileSize(msg.fileInfo.size)}) - ${t('chat.fileExpired', lang)}</div></div>`;
+            fileContent = `<div class="message-file"><div class="file-info"><i class="fas fa-paperclip"></i> ${msg.fileInfo.originalName} (${formatFileSize(msg.fileInfo.size)}) - ${t('chat.fileExpired', lang)}</div></div>`;
         }
     }
     
@@ -492,8 +502,8 @@ function showRoomInfoModal(roomCode, password, lang) {
         <div class="modal-overlay" onclick="closeRoomInfoModal()"></div>
         <div class="modal-content">
             <div class="modal-header">
-                <h2>${t('create.success', lang)}</h2>
-                <button class="modal-close" onclick="closeRoomInfoModal()">×</button>
+                <h2><i class="fas fa-check-circle"></i> ${t('create.success', lang)}</h2>
+                <button class="modal-close" onclick="closeRoomInfoModal()"><i class="fas fa-times"></i></button>
             </div>
             <div class="modal-body">
                 <p class="modal-description">${t('create.shareInfo', lang)}</p>
@@ -503,7 +513,7 @@ function showRoomInfoModal(roomCode, password, lang) {
                         <div class="info-value-box">
                             <span class="info-value" id="roomCodeValue">${roomCode}</span>
                             <button class="copy-btn" id="copyRoomCode" onclick="copyToClipboard('${roomCode}', 'copyRoomCode')">
-                                ${t('common.copy', lang)}
+                                <i class="fas fa-copy"></i> ${t('common.copy', lang)}
                             </button>
                         </div>
                     </div>
@@ -512,13 +522,13 @@ function showRoomInfoModal(roomCode, password, lang) {
                         <div class="info-value-box">
                             <span class="info-value" id="passwordValue">${password}</span>
                             <button class="copy-btn" id="copyPassword" onclick="copyToClipboard('${password}', 'copyPassword')">
-                                ${t('common.copy', lang)}
+                                <i class="fas fa-copy"></i> ${t('common.copy', lang)}
                             </button>
                         </div>
                     </div>
                 </div>
                 <button class="btn btn-primary" onclick="closeRoomInfoModalAndJoin()" style="width: 100%; margin-top: 20px;">
-                    ${t('common.join', lang)}
+                    <i class="fas fa-sign-in-alt"></i> ${t('common.join', lang)}
                 </button>
             </div>
         </div>
@@ -741,8 +751,12 @@ function connectToRoom() {
         
         const messagesDiv = document.getElementById('messages');
         if (messagesDiv) {
-            messagesDiv.innerHTML += renderMessage(messageData);
-            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+            // Kiểm tra message đã tồn tại chưa (tránh duplicate)
+            const existingMsg = messagesDiv.querySelector(`[data-id="${messageData.id}"]`);
+            if (!existingMsg) {
+                messagesDiv.innerHTML += renderMessage(messageData);
+                messagesDiv.scrollTop = messagesDiv.scrollHeight;
+            }
         }
         
         // Auto delete after time
@@ -818,6 +832,7 @@ window.viewQR = async function() {
         if (response.ok) {
             state.qrCode = data.qrCode;
             state.qrExpiresAt = data.expiresAt;
+            state.qrUrl = data.url || null;
             render();
             startQRCountdown();
         } else {
@@ -833,6 +848,7 @@ window.viewQR = async function() {
 window.closeQR = function() {
     state.qrCode = null;
     state.qrExpiresAt = null;
+    state.qrUrl = null;
     render();
 };
 
@@ -915,8 +931,8 @@ function showPasswordModal(password, lang) {
         <div class="modal-overlay" onclick="closePasswordModal()"></div>
         <div class="modal-content">
             <div class="modal-header">
-                <h2>${t('common.viewPassword', lang)}</h2>
-                <button class="modal-close" onclick="closePasswordModal()">×</button>
+                <h2><i class="fas fa-key"></i> ${t('common.viewPassword', lang)}</h2>
+                <button class="modal-close" onclick="closePasswordModal()"><i class="fas fa-times"></i></button>
             </div>
             <div class="modal-body">
                 <div class="room-info-box">
@@ -925,13 +941,13 @@ function showPasswordModal(password, lang) {
                         <div class="info-value-box">
                             <span class="info-value" id="passwordValueModal">${password}</span>
                             <button class="copy-btn" id="copyPasswordModal" onclick="copyToClipboard('${password}', 'copyPasswordModal')">
-                                ${t('common.copy', lang)}
+                                <i class="fas fa-copy"></i> ${t('common.copy', lang)}
                             </button>
                         </div>
                     </div>
                 </div>
                 <button class="btn btn-primary" onclick="closePasswordModal()" style="width: 100%; margin-top: 20px;">
-                    ${t('common.back', lang)}
+                    <i class="fas fa-arrow-left"></i> ${t('common.back', lang)}
                 </button>
             </div>
         </div>
@@ -1049,36 +1065,12 @@ window.sendMessage = async function() {
             } : null
         });
         
-        // Lưu message vào localStorage (với file data đã lưu trong sessionStorage)
-        if (fileInfo) {
-            // Không lưu fileData trong localStorage, chỉ lưu metadata
-            const messageToSave = {
-                ...messageData,
-                fileInfo: {
-                    originalName: fileInfo.originalName,
-                    size: fileInfo.size,
-                    mimetype: fileInfo.mimetype
-                }
-            };
-            saveMessage(state.roomCode, messageToSave);
-        } else {
-            // Lưu message không có file
-            saveMessage(state.roomCode, messageData);
-        }
+        // KHÔNG lưu vào localStorage ở đây - sẽ lưu khi nhận từ socket
+        // Điều này tránh duplicate messages
         
         input.value = '';
         fileInput.value = '';
         document.getElementById('fileInfo').innerHTML = '';
-        
-        // Re-render để hiển thị message mới
-        if (state.currentView === 'chat') {
-            const messages = loadMessages(state.roomCode);
-            const messagesDiv = document.getElementById('messages');
-            if (messagesDiv) {
-                messagesDiv.innerHTML = messages.map(msg => renderMessage(msg)).join('');
-                messagesDiv.scrollTop = messagesDiv.scrollHeight;
-            }
-        }
     }
 };
 
@@ -1093,7 +1085,7 @@ window.handleFileSelect = function(event) {
     if (file) {
         const fileInfoDiv = document.getElementById('fileInfo');
         if (fileInfoDiv) {
-            fileInfoDiv.innerHTML = `<div class="file-info">📎 ${file.name} (${formatFileSize(file.size)})</div>`;
+            fileInfoDiv.innerHTML = `<div class="file-info"><i class="fas fa-paperclip"></i> ${file.name} (${formatFileSize(file.size)})</div>`;
         }
     }
 };
@@ -1133,6 +1125,71 @@ setInterval(() => {
     }
 }, 60000); // Check every minute
 
+// Check URL params for auto join
+function checkURLParams() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const roomCode = urlParams.get('room');
+    const password = urlParams.get('password');
+    
+    if (roomCode && password) {
+        // Auto join room from URL
+        state.roomCode = roomCode.toUpperCase();
+        window.joinRoomFromURL(roomCode, password);
+    }
+}
+
+window.joinRoomFromURL = async function(roomCode, password) {
+    const lang = getCurrentLanguage();
+    
+    if (!/^\d{6}$/.test(password)) {
+        showStatus(t('chat.invalidPassword', lang), 'error');
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/rooms/join', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                roomCode: roomCode.toUpperCase(),
+                password: password,
+                deviceToken: state.deviceToken
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            state.roomCode = roomCode.toUpperCase();
+            state.token = data.token;
+            state.autoDelete = data.autoDelete;
+            state.username = generateRandomName();
+            state.isOwner = data.isOwner || false;
+            
+            saveUserRoom(data.token, roomCode.toUpperCase(), {
+                autoDelete: data.autoDelete,
+                isOwner: data.isOwner || false
+            });
+            
+            // Clear URL params
+            window.history.replaceState({}, document.title, window.location.pathname);
+            
+            connectToRoom();
+        } else {
+            showStatus(data.error || t('chat.joinError', lang), 'error');
+            state.currentView = 'join';
+            render();
+        }
+    } catch (error) {
+        showStatus(t('chat.connectionError', lang), 'error');
+        state.currentView = 'join';
+        render();
+    }
+};
+
 // Initial render
-render();
+checkURLParams();
+if (state.currentView === 'setup') {
+    render();
+}
 
