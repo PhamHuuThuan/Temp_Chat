@@ -199,8 +199,18 @@ app.get('/api/rooms/:roomCode', async (req, res) => {
     }
     
     let isOwner = false;
+    let isValidToken = false;
+    
     if (token) {
       isOwner = room.ownerToken === token;
+      // Kiểm tra token có trong room.users hoặc là ownerToken
+      const isTokenInRoom = room.users && room.users.includes(token);
+      isValidToken = isOwner || isTokenInRoom;
+      
+      // Nếu token không hợp lệ, trả về lỗi
+      if (!isValidToken) {
+        return res.status(403).json({ error: 'Invalid token' });
+      }
     }
     
     res.json({
@@ -395,13 +405,28 @@ io.on('connection', (socket) => {
       // 1. Token có trong room.users
       // 2. Token là owner token (cho phép rejoin owner)
       // 3. Token đã hết hạn nhưng là owner token (room trống, owner vào lại)
-      if (!isTokenInRoom && !isOwnerToken && !isTokenExpired) {
-        socket.emit('error', { message: 'Invalid token' });
-        return;
-      }
-      
-      // Nếu token hợp lệ nhưng chưa có trong users, thêm vào (rejoin)
-      if (!isTokenInRoom && (isOwnerToken || isTokenInRoom)) {
+      if (!isTokenInRoom && !isOwnerToken) {
+        // Nếu token không có trong room và không phải owner, kiểm tra xem có phải token hết hạn không
+        if (!isTokenExpired) {
+          socket.emit('error', { message: 'Invalid token' });
+          return;
+        }
+        // Nếu token hết hạn nhưng là owner token và room trống, cho phép vào lại
+        if (isOwnerToken && (!room.users || room.users.length === 0)) {
+          // Owner vào lại room trống, thêm vào users
+          if (!room.users) {
+            room.users = [];
+          }
+          if (!room.users.includes(token)) {
+            room.users.push(token);
+            await room.save();
+          }
+        } else {
+          socket.emit('error', { message: 'Invalid token' });
+          return;
+        }
+      } else {
+        // Token hợp lệ (có trong room.users hoặc là owner token), đảm bảo có trong users
         if (!room.users) {
           room.users = [];
         }
