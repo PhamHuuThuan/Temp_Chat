@@ -24,42 +24,67 @@ Web server cho phép nhắn tin với tính năng tự động xóa tin nhắn t
 
 ## Cài đặt
 
-### 1. Clone repository
+### Cách 1: Chạy với Docker (Khuyến nghị)
 
 ```bash
+# Clone repository
 git clone <repository-url>
 cd Temp_Message
-```
 
-### 2. Cài đặt dependencies
-
-```bash
-npm install
-```
-
-### 3. Khởi động MongoDB với Docker
-
-```bash
+# Chạy toàn bộ project với Docker
 docker-compose up -d
+
+# Xem logs
+docker-compose logs -f
+
+# Dừng
+docker-compose down
 ```
 
-MongoDB sẽ chạy tại `mongodb://admin:admin123@localhost:27017/temp_message`
+Ứng dụng sẽ chạy tại `http://localhost:3000`
 
-### 4. Chạy server
+### Cách 2: Chạy thủ công (Development)
 
 ```bash
+# 1. Clone repository
+git clone <repository-url>
+cd Temp_Message
+
+# 2. Cài đặt dependencies
+npm install
+
+# 3. Khởi động MongoDB với Docker
+docker-compose up -d mongodb
+
+# 4. Chạy server
 npm start
-```
 
-Hoặc chạy ở chế độ development:
-
-```bash
+# Hoặc chạy ở chế độ development
 npm run dev
 ```
 
 Server sẽ chạy tại `http://localhost:3000`
 
 ### 5. Deploy lên VPS
+
+#### Với Docker (Khuyến nghị):
+
+```bash
+# 1. Upload files lên VPS
+scp -i ~/.ssh/gcloud_key -r * user@vps:~/temp-message/
+
+# 2. SSH vào VPS
+ssh -i ~/.ssh/gcloud_key user@vps
+
+# 3. Chạy với Docker
+cd ~/temp-message
+docker-compose up -d
+
+# Xem logs
+docker-compose logs -f app
+```
+
+#### Không dùng Docker:
 
 ```bash
 # 1. Upload files lên VPS
@@ -75,10 +100,10 @@ chmod +x setup.sh
 exit
 ssh -i ~/.ssh/gcloud_key user@vps
 
-# 4. Cài đặt dependencies và chạy
+# 4. Chạy MongoDB và app
 cd ~/temp-message
 npm install
-docker-compose up -d
+docker-compose up -d mongodb
 pm2 start ecosystem.config.js
 pm2 save
 ```
