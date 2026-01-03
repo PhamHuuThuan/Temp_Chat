@@ -227,9 +227,8 @@ function render() {
                 <div class="main-content">
                     <div class="room-setup">
                         <h2>${t('setup.title', lang)}</h2>
-                        <button class="btn btn-primary" onclick="showCreateRoom()"><i class="fas fa-plus-circle"></i> ${t('common.create', lang)}</button>
-                        <button class="btn btn-secondary" onclick="showJoinRoom()"><i class="fas fa-sign-in-alt"></i> ${t('common.join', lang)}</button>
-                        <button class="btn btn-secondary" onclick="showQRScanner()" style="margin-top: 10px;"><i class="fas fa-qrcode"></i> ${t('common.scanQR', lang)}</button>
+                        <button class="btn btn-primary" onclick="showCreateRoom()" title="${t('common.create', lang)}"><i class="fas fa-plus-circle"></i></button>
+                        <button class="btn btn-secondary" onclick="showJoinRoom()" title="${t('common.join', lang)}"><i class="fas fa-sign-in-alt"></i></button>
                         
                         ${roomsList.length > 0 ? `
                             <div style="margin-top: 30px;">
@@ -287,8 +286,8 @@ function render() {
                             <label>${t('create.passwordLabel', lang)}</label>
                             <input type="text" id="password" placeholder="${t('create.passwordPlaceholder', lang)}" maxlength="6" pattern="[0-9]*">
                         </div>
-                        <button class="btn btn-primary" onclick="createRoom()"><i class="fas fa-plus"></i> ${t('create.button', lang)}</button>
-                        <button class="btn btn-secondary" onclick="backToSetup()"><i class="fas fa-arrow-left"></i> ${t('common.back', lang)}</button>
+                        <button class="btn btn-primary" onclick="createRoom()" title="${t('create.button', lang)}"><i class="fas fa-plus"></i></button>
+                        <button class="btn btn-secondary" onclick="backToSetup()" title="${t('common.back', lang)}"><i class="fas fa-arrow-left"></i></button>
                     </div>
                 </div>
             </div>
@@ -321,13 +320,8 @@ function render() {
                             <label>${t('join.passwordLabel', lang)}</label>
                             <input type="text" id="joinPassword" placeholder="${t('join.passwordPlaceholder', lang)}" maxlength="6" pattern="[0-9]*">
                         </div>
-                        <button class="btn btn-primary" onclick="joinRoom()"><i class="fas fa-sign-in-alt"></i> ${t('join.button', lang)}</button>
-                        <div style="text-align: center; margin: 20px 0;">
-                            <div style="border-top: 1px solid #E1E8ED; padding-top: 20px;">
-                                <button class="btn btn-secondary" onclick="showQRScanner()"><i class="fas fa-qrcode"></i> ${t('common.scanQR', lang)}</button>
-                            </div>
-                        </div>
-                        <button class="btn btn-secondary" onclick="backToSetup()"><i class="fas fa-arrow-left"></i> ${t('common.back', lang)}</button>
+                        <button class="btn btn-primary" onclick="joinRoom()" title="${t('join.button', lang)}"><i class="fas fa-sign-in-alt"></i></button>
+                        <button class="btn btn-secondary" onclick="backToSetup()" title="${t('common.back', lang)}"><i class="fas fa-arrow-left"></i></button>
                     </div>
                 </div>
             </div>
@@ -353,7 +347,7 @@ function render() {
                                     <option value="zh" ${lang === 'zh' ? 'selected' : ''}>${t('lang.zh', lang)}</option>
                                 </select>
                             </div>
-                            <button class="btn btn-secondary" onclick="leaveRoom()" style="margin: 0;"><i class="fas fa-sign-out-alt"></i> ${t('common.leave', lang)}</button>
+                            <button class="btn btn-secondary" onclick="leaveRoom()" style="margin: 0;" title="${t('common.leave', lang)}"><i class="fas fa-sign-out-alt"></i></button>
                         </div>
                     </div>
                 </div>
@@ -367,13 +361,13 @@ function render() {
                             <div class="chat-header-right">
                                 ${state.isOwner ? `
                                     <button class="btn btn-owner" onclick="viewPassword()" title="${t('common.viewPassword', lang)}">
-                                        <i class="fas fa-key"></i> ${t('common.viewPassword', lang)}
+                                        <i class="fas fa-key"></i>
                                     </button>
                                     <button class="btn btn-owner" onclick="viewQR()" title="${t('common.viewQR', lang)}">
-                                        <i class="fas fa-qrcode"></i> ${t('common.viewQR', lang)}
+                                        <i class="fas fa-qrcode"></i>
                                     </button>
                                     <button class="btn btn-danger" onclick="deleteRoom()" title="${t('common.deleteRoom', lang)}">
-                                        <i class="fas fa-trash"></i> ${t('common.deleteRoom', lang)}
+                                        <i class="fas fa-trash"></i>
                                     </button>
                                 ` : ''}
                             </div>
@@ -389,7 +383,7 @@ function render() {
                                     <input type="file" id="fileInput" onchange="handleFileSelect(event)">
                                     <label for="fileInput" class="file-input-label"><i class="fas fa-paperclip"></i> ${t('common.file', lang)}</label>
                                 </div>
-                                <button class="btn btn-primary" onclick="sendMessage()"><i class="fas fa-paper-plane"></i> ${t('common.send', lang)}</button>
+                                <button class="btn btn-primary" onclick="sendMessage()" title="${t('common.send', lang)}"><i class="fas fa-paper-plane"></i></button>
                             </div>
                             <div id="fileInfo"></div>
                         </div>
@@ -445,12 +439,12 @@ function renderMessage(msg) {
             const dataUrl = `data:${msg.fileInfo.mimetype};base64,${fileData}`;
             
             if (msg.fileInfo.mimetype && msg.fileInfo.mimetype.startsWith('image/')) {
-                fileContent = `<div class="message-file"><img src="${dataUrl}" alt="${msg.fileInfo.originalName}"></div>`;
+                fileContent = `<div class="message-file"><img src="${dataUrl}" alt="${msg.fileInfo.originalName}" onclick="viewFile('${msg.id}', 'image')" class="message-image-thumbnail"></div>`;
             } else if (msg.fileInfo.mimetype && msg.fileInfo.mimetype.startsWith('video/')) {
-                fileContent = `<div class="message-file"><video controls><source src="${dataUrl}" type="${msg.fileInfo.mimetype}"></video></div>`;
+                fileContent = `<div class="message-file"><video controls class="message-video-thumbnail"><source src="${dataUrl}" type="${msg.fileInfo.mimetype}"></video></div>`;
             } else {
                 // Tạo download link từ data URL
-                fileContent = `<div class="message-file"><a href="${dataUrl}" class="file-link" download="${msg.fileInfo.originalName}"><i class="fas fa-paperclip"></i> ${msg.fileInfo.originalName} (${formatFileSize(msg.fileInfo.size)})</a></div>`;
+                fileContent = `<div class="message-file"><a href="${dataUrl}" class="file-link" download="${msg.fileInfo.originalName}" onclick="viewFile('${msg.id}', 'file')"><i class="fas fa-paperclip"></i> ${msg.fileInfo.originalName} (${formatFileSize(msg.fileInfo.size)})</a></div>`;
             }
         } else {
             // File data đã bị mất (có thể do refresh trang - sessionStorage bị xóa)
@@ -459,12 +453,26 @@ function renderMessage(msg) {
         }
     }
     
+    // Calculate progress percentage for circular countdown
+    const deleteTime = AUTO_DELETE_TIMES[msg.autoDelete] || AUTO_DELETE_TIMES['1h'];
+    const progress = timeLeft > 0 ? Math.min(100, (timeLeft / deleteTime) * 100) : 0;
+    const circumference = 2 * Math.PI * 18; // radius = 18
+    const offset = circumference - (progress / 100) * circumference;
+    
     return `
         <div class="message" data-id="${msg.id}" data-expires-at="${expiresAt}">
             <div class="message-header">
                 <span class="message-username">${msg.username}</span>
                 <span class="message-time">${timeStr}</span>
-                <span class="message-countdown" id="countdown-${msg.id}">${t('chat.deletesIn', lang)} ${countdownText}</span>
+                <div class="countdown-circle" id="countdown-${msg.id}">
+                    <svg width="40" height="40" class="countdown-svg">
+                        <circle cx="20" cy="20" r="18" class="countdown-bg"></circle>
+                        <circle cx="20" cy="20" r="18" class="countdown-progress" 
+                                stroke-dasharray="${circumference}" 
+                                stroke-dashoffset="${offset}"></circle>
+                    </svg>
+                    <span class="countdown-text">${countdownText}</span>
+                </div>
             </div>
             <div class="message-content">
                 ${msg.message ? `<div>${escapeHtml(msg.message)}</div>` : ''}
@@ -1398,16 +1406,32 @@ function startMessageCountdown(messageId, timestamp, autoDelete) {
         const timeLeft = Math.max(0, expiresAt - now);
         
         const lang = getCurrentLanguage();
+        const deleteTime = AUTO_DELETE_TIMES[autoDelete] || AUTO_DELETE_TIMES['1h'];
+        const progress = timeLeft > 0 ? Math.min(100, (timeLeft / deleteTime) * 100) : 0;
+        const circumference = 2 * Math.PI * 18;
+        const offset = circumference - (progress / 100) * circumference;
+        
+        // Update circular progress
+        const svg = countdownEl.querySelector('.countdown-svg');
+        const progressCircle = svg ? svg.querySelector('.countdown-progress') : null;
+        const textSpan = countdownEl.querySelector('.countdown-text');
+        
+        if (progressCircle) {
+            progressCircle.setAttribute('stroke-dashoffset', offset);
+        }
+        
         if (timeLeft > 0) {
             const minutes = Math.floor(timeLeft / 60000);
             const seconds = Math.floor((timeLeft % 60000) / 1000);
             let countdownText = '';
             if (minutes > 0) {
-                countdownText = `${minutes}m ${seconds}s`;
+                countdownText = `${minutes}m`;
             } else {
                 countdownText = `${seconds}s`;
             }
-            countdownEl.textContent = `${t('chat.deletesIn', lang)} ${countdownText}`;
+            if (textSpan) {
+                textSpan.textContent = countdownText;
+            }
             
             // Update every second
             setTimeout(updateCountdown, 1000);
@@ -1545,6 +1569,65 @@ window.joinRoomFromURL = async function(roomCode, password) {
         state.currentView = 'join';
         render();
     }
+};
+
+// View file in modal
+window.viewFile = function(messageId, fileType) {
+    const messages = loadMessages(state.roomCode);
+    const message = messages.find(m => m.id === messageId);
+    
+    if (!message || !message.fileInfo) return;
+    
+    const fileData = getFileData(messageId);
+    if (!fileData) {
+        const lang = getCurrentLanguage();
+        showStatus(t('chat.fileExpired', lang), 'error');
+        return;
+    }
+    
+    const dataUrl = `data:${message.fileInfo.mimetype};base64,${fileData}`;
+    const lang = getCurrentLanguage();
+    
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    
+    let content = '';
+    if (fileType === 'image') {
+        content = `<img src="${dataUrl}" alt="${message.fileInfo.originalName}" style="max-width: 100%; max-height: 80vh; object-fit: contain;">`;
+    } else if (fileType === 'video') {
+        content = `<video controls style="max-width: 100%; max-height: 80vh;"><source src="${dataUrl}" type="${message.fileInfo.mimetype}"></video>`;
+    } else {
+        content = `<div style="padding: 40px; text-align: center;">
+            <i class="fas fa-file" style="font-size: 64px; color: #666; margin-bottom: 20px;"></i>
+            <p style="font-size: 18px; color: #333; margin-bottom: 10px;">${message.fileInfo.originalName}</p>
+            <p style="font-size: 14px; color: #666;">${formatFileSize(message.fileInfo.size)}</p>
+        </div>`;
+    }
+    
+    modal.innerHTML = `
+        <div class="modal-content" style="max-width: 90vw; max-height: 90vh; overflow: auto;">
+            <div class="modal-header">
+                <h3>${message.fileInfo.originalName}</h3>
+                <div style="display: flex; gap: 10px;">
+                    <a href="${dataUrl}" download="${message.fileInfo.originalName}" class="btn btn-primary" style="text-decoration: none;">
+                        <i class="fas fa-download"></i> ${t('common.download', lang)}
+                    </a>
+                    <button class="modal-close" onclick="this.closest('.modal-overlay').remove()"><i class="fas fa-times"></i></button>
+                </div>
+            </div>
+            <div class="modal-body" style="text-align: center; padding: 20px;">
+                ${content}
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    
+    // Close on overlay click
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            modal.remove();
+        }
+    });
 };
 
 // Initial render
