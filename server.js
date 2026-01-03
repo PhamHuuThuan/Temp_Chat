@@ -254,10 +254,23 @@ app.get('/api/rooms/:roomCode/qr', async (req, res) => {
     
     // Kiểm tra QR code có hết hạn không
     if (!room.qrCode || !room.qrCode.expiresAt || new Date(room.qrCode.expiresAt).getTime() < now) {
-      // Tạo QR code mới với URL để quét được từ app bên ngoài
-      const protocol = req.protocol || 'http';
-      const host = req.get('host') || 'localhost:3000';
-      const joinUrl = `${protocol}://${host}/?room=${roomCode}&password=${room.password}`;
+      // Tạo token ngắn hạn để mã hóa thông tin room (không để lộ room code và password)
+      const qrToken = jwt.sign(
+        { 
+          roomCode: roomCode.toUpperCase(), 
+          password: room.password,
+          expiresAt: now + QR_EXPIRY
+        },
+        JWT_SECRET,
+        { expiresIn: '2m' }
+      );
+      
+      // Tạo QR code với token đã mã hóa
+      const protocol = req.protocol || (req.secure ? 'https' : 'http');
+      const host = req.get('host') || req.headers.host || 'localhost:3000';
+      // URL format: http://domain/join?token=ENCRYPTED_TOKEN
+      // Token chứa room code và password đã mã hóa, không thể đọc được từ QR code
+      const joinUrl = `${protocol}://${host}/join?token=${qrToken}`;
       
       try {
         const qrImage = await QRCode.toDataURL(joinUrl, {
@@ -269,7 +282,7 @@ app.get('/api/rooms/:roomCode/qr', async (req, res) => {
         room.qrCode = {
           data: qrImage,
           expiresAt: new Date(now + QR_EXPIRY),
-          url: joinUrl
+          token: qrToken
         };
         await room.save();
       } catch (error) {
@@ -280,13 +293,40 @@ app.get('/api/rooms/:roomCode/qr', async (req, res) => {
     const expiresAt = new Date(room.qrCode.expiresAt).getTime();
     res.json({
       qrCode: room.qrCode.data,
-      url: room.qrCode.url,
       expiresAt: expiresAt,
       expiresIn: Math.max(0, expiresAt - now)
     });
   } catch (error) {
     console.error('Error getting QR code:', error);
     res.status(500).json({ error: 'Failed to get QR code' });
+  }
+});
+
+// Join room từ QR token (mã hóa)
+app.get('/join', async (req, res) => {
+  const { token } = req.query;
+  
+  if (!token) {
+    return res.redirect('/?error=invalid_token');
+  }
+  
+  try {
+    // Decode token để lấy room code và password
+    const decoded = jwt.verify(token, JWT_SECRET);
+    
+    // Kiểm tra token có hết hạn không
+    if (decoded.expiresAt && decoded.expiresAt < Date.now()) {
+      return res.redirect('/?error=qr_expired');
+    }
+    
+    // Redirect đến trang join với room code và password
+    res.redirect(`/?room=${decoded.roomCode}&password=${decoded.password}`);
+  } catch (error) {
+    // Token không hợp lệ hoặc đã hết hạn
+    if (error.name === 'TokenExpiredError') {
+      return res.redirect('/?error=qr_expired');
+    }
+    return res.redirect('/?error=invalid_token');
   }
 });
 

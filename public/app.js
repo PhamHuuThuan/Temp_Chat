@@ -7,10 +7,7 @@ let state = {
     autoDelete: '1h',
     socket: null,
     deviceToken: null,
-    isOwner: false,
-    qrCode: null,
-    qrExpiresAt: null,
-    qrUrl: null
+    isOwner: false
 };
 
 // Initialize device token
@@ -342,12 +339,15 @@ function render() {
                             <h1>${t('chat.title', lang)} ${state.roomCode}</h1>
                             <p>${t('chat.autoDeleteAfter', lang)} ${getAutoDeleteLabel(state.autoDelete)}</p>
                         </div>
-                        <div class="language-selector">
-                            <select id="languageSelect" onchange="changeLanguage(this.value)">
-                                <option value="vi" ${lang === 'vi' ? 'selected' : ''}>${t('lang.vi', lang)}</option>
-                                <option value="en" ${lang === 'en' ? 'selected' : ''}>${t('lang.en', lang)}</option>
-                                <option value="zh" ${lang === 'zh' ? 'selected' : ''}>${t('lang.zh', lang)}</option>
-                            </select>
+                        <div style="display: flex; gap: 15px; align-items: center;">
+                            <div class="language-selector">
+                                <select id="languageSelect" onchange="changeLanguage(this.value)">
+                                    <option value="vi" ${lang === 'vi' ? 'selected' : ''}>${t('lang.vi', lang)}</option>
+                                    <option value="en" ${lang === 'en' ? 'selected' : ''}>${t('lang.en', lang)}</option>
+                                    <option value="zh" ${lang === 'zh' ? 'selected' : ''}>${t('lang.zh', lang)}</option>
+                                </select>
+                            </div>
+                            <button class="btn btn-secondary" onclick="leaveRoom()" style="margin: 0;"><i class="fas fa-sign-out-alt"></i> ${t('common.leave', lang)}</button>
                         </div>
                     </div>
                 </div>
@@ -370,22 +370,8 @@ function render() {
                                         <i class="fas fa-trash"></i> ${t('common.deleteRoom', lang)}
                                     </button>
                                 ` : ''}
-                                <button class="leave-btn" onclick="leaveRoom()"><i class="fas fa-sign-out-alt"></i> ${t('common.leave', lang)}</button>
                             </div>
                         </div>
-                        ${state.qrCode ? `
-                            <div class="qr-display" id="qrDisplay">
-                                <div class="qr-header">
-                                    <h4><i class="fas fa-qrcode"></i> ${t('common.viewQR', lang)}</h4>
-                                    <button class="qr-close" onclick="closeQR()"><i class="fas fa-times"></i></button>
-                                </div>
-                                <div class="qr-content">
-                                    <img src="${state.qrCode}" alt="QR Code" class="qr-image">
-                                    ${state.qrUrl ? `<p style="margin: 12px 0; font-size: 12px; color: #666; word-break: break-all;">${state.qrUrl}</p>` : ''}
-                                    <p class="qr-expires" id="qrExpires">${t('common.qrExpiresIn', lang)} <span id="qrCountdown"></span></p>
-                                </div>
-                            </div>
-                        ` : ''}
                         <div class="messages" id="messages">
                             ${messages.map(msg => renderMessage(msg)).join('')}
                         </div>
@@ -423,6 +409,27 @@ function renderMessage(msg) {
     const date = new Date(msg.timestamp);
     const timeStr = date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
     
+    // Tính thời gian còn lại trước khi message bị xóa
+    const autoDeleteTime = AUTO_DELETE_TIMES[msg.autoDelete] || AUTO_DELETE_TIMES['1h'];
+    const expiresAt = msg.timestamp + autoDeleteTime;
+    const now = Date.now();
+    const timeLeft = Math.max(0, expiresAt - now);
+    
+    // Format countdown
+    const lang = getCurrentLanguage();
+    let countdownText = '';
+    if (timeLeft > 0) {
+        const minutes = Math.floor(timeLeft / 60000);
+        const seconds = Math.floor((timeLeft % 60000) / 1000);
+        if (minutes > 0) {
+            countdownText = `${minutes}m ${seconds}s`;
+        } else {
+            countdownText = `${seconds}s`;
+        }
+    } else {
+        countdownText = t('chat.expired', lang);
+    }
+    
     let fileContent = '';
     if (msg.fileInfo) {
         // Lấy file data từ sessionStorage
@@ -447,10 +454,11 @@ function renderMessage(msg) {
     }
     
     return `
-        <div class="message" data-id="${msg.id}">
+        <div class="message" data-id="${msg.id}" data-expires-at="${expiresAt}">
             <div class="message-header">
                 <span class="message-username">${msg.username}</span>
                 <span class="message-time">${timeStr}</span>
+                <span class="message-countdown" id="countdown-${msg.id}">${t('chat.deletesIn', lang)} ${countdownText}</span>
             </div>
             <div class="message-content">
                 ${msg.message ? `<div>${escapeHtml(msg.message)}</div>` : ''}
@@ -580,15 +588,20 @@ window.showQRScanner = function() {
         <div class="modal-content" style="max-width: 500px;">
             <div class="modal-header">
                 <h3><i class="fas fa-qrcode"></i> ${t('common.scanQR', lang)}</h3>
-                <button class="modal-close" onclick="this.closest('.modal-overlay').remove()"><i class="fas fa-times"></i></button>
+                <button class="modal-close" onclick="closeQRScanner()"><i class="fas fa-times"></i></button>
             </div>
             <div class="modal-body">
                 <p style="margin-bottom: 20px; color: #666;">${t('common.scanQRInstruction', lang)}</p>
-                <div id="qr-scanner-container" style="text-align: center;">
-                    <video id="qr-video" width="100%" style="max-width: 400px; border-radius: 8px; background: #000;"></video>
+                <div id="qr-scanner-container" style="text-align: center; position: relative;">
+                    <video id="qr-video" width="100%" style="max-width: 400px; border-radius: 8px; background: #000; display: none;"></video>
                     <canvas id="qr-canvas" style="display: none;"></canvas>
+                    <div id="qr-scanning-indicator" style="display: none; padding: 20px; color: #666;">
+                        <i class="fas fa-camera" style="font-size: 48px; margin-bottom: 10px;"></i>
+                        <p>${t('common.scanningQR', lang)}</p>
+                    </div>
                 </div>
                 <div style="margin-top: 20px;">
+                    <div style="text-align: center; margin-bottom: 15px; color: #666; font-size: 14px;">${t('common.or', lang)}</div>
                     <input type="text" id="qr-manual-input" placeholder="${t('common.orEnterURL', lang)}" style="width: 100%; padding: 12px; border: 1px solid #E1E8ED; border-radius: 8px; font-size: 14px;">
                     <button class="btn btn-primary" onclick="processQRInput()" style="width: 100%; margin-top: 10px;"><i class="fas fa-check"></i> ${t('common.join', lang)}</button>
                 </div>
@@ -597,33 +610,117 @@ window.showQRScanner = function() {
     `;
     document.body.appendChild(modal);
     
-    // Thử sử dụng camera để quét QR (nếu có)
-    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+    // Lưu modal để cleanup sau
+    window.qrScannerModal = modal;
+    window.qrScannerStream = null;
+    
+    // Thử sử dụng camera để quét QR
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia && typeof jsQR !== 'undefined') {
+        const video = document.getElementById('qr-video');
+        const canvas = document.getElementById('qr-canvas');
+        const scanningIndicator = document.getElementById('qr-scanning-indicator');
+        
+        navigator.mediaDevices.getUserMedia({ 
+            video: { 
+                facingMode: 'environment',
+                width: { ideal: 640 },
+                height: { ideal: 480 }
+            } 
+        })
             .then(stream => {
-                const video = document.getElementById('qr-video');
+                window.qrScannerStream = stream;
                 video.srcObject = stream;
+                video.style.display = 'block';
+                scanningIndicator.style.display = 'block';
                 video.play();
                 
-                // Sử dụng jsQR library nếu có, hoặc chỉ cho phép nhập thủ công
-                // Vì không có library, chúng ta sẽ chỉ cho phép nhập URL thủ công
+                const context = canvas.getContext('2d');
+                let scanning = true;
+                
+                function scanQR() {
+                    if (!scanning) return;
+                    
+                    if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                        canvas.width = video.videoWidth;
+                        canvas.height = video.videoHeight;
+                        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+                        
+                        const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+                        const code = jsQR(imageData.data, imageData.width, imageData.height);
+                        
+                        if (code) {
+                            scanning = false;
+                            // Tìm thấy QR code
+                            const url = code.data;
+                            closeQRScanner();
+                            processQRFromURL(url);
+                        }
+                    }
+                    
+                    if (scanning) {
+                        requestAnimationFrame(scanQR);
+                    }
+                }
+                
+                video.addEventListener('loadedmetadata', () => {
+                    scanQR();
+                });
             })
             .catch(err => {
-                console.log('Camera access denied or not available');
+                console.log('Camera access denied or not available:', err);
                 document.getElementById('qr-video').style.display = 'none';
+                document.getElementById('qr-scanning-indicator').style.display = 'none';
             });
     } else {
         document.getElementById('qr-video').style.display = 'none';
+        document.getElementById('qr-scanning-indicator').style.display = 'none';
+    }
+};
+
+window.closeQRScanner = function() {
+    if (window.qrScannerStream) {
+        window.qrScannerStream.getTracks().forEach(track => track.stop());
+        window.qrScannerStream = null;
+    }
+    if (window.qrScannerModal) {
+        window.qrScannerModal.remove();
+        window.qrScannerModal = null;
+    }
+};
+
+window.processQRFromURL = function(url) {
+    // Parse URL để lấy room code và password
+    let roomCode = null;
+    let password = null;
+    
+    try {
+        // Thử parse như URL đầy đủ
+        const urlObj = new URL(url);
+        roomCode = urlObj.searchParams.get('room');
+        password = urlObj.searchParams.get('password');
+    } catch (e) {
+        // Nếu không phải URL hợp lệ, thử parse trực tiếp từ string
+        const match = url.match(/[?&]room=([A-Z0-9]+).*[&]?password=(\d{6})/i);
+        if (match) {
+            roomCode = match[1];
+            password = match[2];
+        } else {
+            // Thử parse từ format khác
+            const match2 = url.match(/room=([A-Z0-9]+).*password=(\d{6})/i);
+            if (match2) {
+                roomCode = match2[1];
+                password = match2[2];
+            }
+        }
     }
     
-    // Cleanup khi đóng modal
-    modal.querySelector('.modal-close').addEventListener('click', () => {
-        const video = document.getElementById('qr-video');
-        if (video && video.srcObject) {
-            video.srcObject.getTracks().forEach(track => track.stop());
-        }
-        modal.remove();
-    });
+    if (roomCode && password) {
+        // Join room
+        window.joinRoomFromURL(roomCode, password);
+    } else {
+        const lang = getCurrentLanguage();
+        showStatus(t('common.invalidQRURL', lang), 'error');
+    }
 };
 
 window.processQRInput = function() {
@@ -982,11 +1079,44 @@ window.viewQR = async function() {
         const data = await response.json();
         
         if (response.ok) {
-            state.qrCode = data.qrCode;
-            state.qrExpiresAt = data.expiresAt;
-            state.qrUrl = data.url || null;
-            render();
-            startQRCountdown();
+            const lang = getCurrentLanguage();
+            const modal = document.createElement('div');
+            modal.className = 'modal-overlay';
+            modal.innerHTML = `
+                <div class="modal-content" style="max-width: 400px;">
+                    <div class="modal-header">
+                        <h3><i class="fas fa-qrcode"></i> ${t('common.viewQR', lang)}</h3>
+                        <button class="modal-close" onclick="this.closest('.modal-overlay').remove()"><i class="fas fa-times"></i></button>
+                    </div>
+                    <div class="modal-body" style="text-align: center;">
+                        <img src="${data.qrCode}" alt="QR Code" style="max-width: 100%; border-radius: 8px;">
+                        <p style="margin-top: 15px; color: #666; font-size: 14px;">${t('common.qrExpiresIn', lang)} <span id="qrModalCountdown"></span></p>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+            
+            // Start countdown
+            let expiresAt = data.expiresAt;
+            function updateQRCountdown() {
+                const now = Date.now();
+                const timeLeft = Math.max(0, expiresAt - now);
+                const countdownEl = document.getElementById('qrModalCountdown');
+                if (countdownEl) {
+                    const minutes = Math.floor(timeLeft / 60000);
+                    const seconds = Math.floor((timeLeft % 60000) / 1000);
+                    countdownEl.textContent = `${minutes}m ${seconds}s`;
+                    if (timeLeft > 0) {
+                        setTimeout(updateQRCountdown, 1000);
+                    }
+                }
+            }
+            updateQRCountdown();
+            
+            // Close modal handler
+            modal.querySelector('.modal-close').addEventListener('click', () => {
+                modal.remove();
+            });
         } else {
             const lang = getCurrentLanguage();
             showStatus(data.error || t('chat.viewQRError', lang), 'error');
@@ -995,13 +1125,6 @@ window.viewQR = async function() {
         const lang = getCurrentLanguage();
         showStatus(t('chat.viewQRError', lang), 'error');
     }
-};
-
-window.closeQR = function() {
-    state.qrCode = null;
-    state.qrExpiresAt = null;
-    state.qrUrl = null;
-    render();
 };
 
 window.deleteRoom = async function() {
@@ -1032,48 +1155,6 @@ window.deleteRoom = async function() {
     }
 };
 
-// Load QR code
-async function loadQRCode() {
-    try {
-        const response = await fetch(`/api/rooms/${state.roomCode}/qr`);
-        const data = await response.json();
-        
-        if (response.ok) {
-            state.qrCode = data.qrCode;
-            state.qrExpiresAt = data.expiresAt;
-            render();
-            startQRCountdown();
-        }
-    } catch (error) {
-        // Ignore error, QR will be generated when owner clicks view
-    }
-}
-
-// Start QR countdown timer
-function startQRCountdown() {
-    if (!state.qrExpiresAt) return;
-    
-    const updateCountdown = () => {
-        const now = Date.now();
-        const remaining = Math.max(0, state.qrExpiresAt - now);
-        const seconds = Math.floor(remaining / 1000);
-        
-        const countdownEl = document.getElementById('qrCountdown');
-        if (countdownEl) {
-            const lang = getCurrentLanguage();
-            countdownEl.textContent = `${seconds} ${t('common.seconds', lang)}`;
-        }
-        
-        if (remaining <= 0) {
-            // QR code hết hạn, tự động đóng
-            closeQR();
-        } else {
-            setTimeout(updateCountdown, 1000);
-        }
-    };
-    
-    updateCountdown();
-}
 
 // Show password modal
 function showPasswordModal(password, lang) {
@@ -1262,6 +1343,46 @@ function showStatus(message, type) {
     }
 }
 
+// Start countdown timer for a message
+function startMessageCountdown(messageId, timestamp, autoDelete) {
+    const deleteTime = AUTO_DELETE_TIMES[autoDelete] || AUTO_DELETE_TIMES['1h'];
+    const expiresAt = timestamp + deleteTime;
+    
+    function updateCountdown() {
+        const countdownEl = document.getElementById(`countdown-${messageId}`);
+        if (!countdownEl) return;
+        
+        const now = Date.now();
+        const timeLeft = Math.max(0, expiresAt - now);
+        
+        const lang = getCurrentLanguage();
+        if (timeLeft > 0) {
+            const minutes = Math.floor(timeLeft / 60000);
+            const seconds = Math.floor((timeLeft % 60000) / 1000);
+            let countdownText = '';
+            if (minutes > 0) {
+                countdownText = `${minutes}m ${seconds}s`;
+            } else {
+                countdownText = `${seconds}s`;
+            }
+            countdownEl.textContent = `${t('chat.deletesIn', lang)} ${countdownText}`;
+            
+            // Update every second
+            setTimeout(updateCountdown, 1000);
+        } else {
+            // Message expired, remove it
+            const msgElement = document.querySelector(`[data-id="${messageId}"]`);
+            if (msgElement) {
+                msgElement.remove();
+            }
+            deleteFileData(messageId);
+            cleanupMessages(state.roomCode);
+        }
+    }
+    
+    updateCountdown();
+}
+
 // Auto cleanup messages periodically
 setInterval(() => {
     if (state.roomCode) {
@@ -1272,6 +1393,15 @@ setInterval(() => {
                 const messages = loadMessages(state.roomCode);
                 messagesDiv.innerHTML = messages.map(msg => renderMessage(msg)).join('');
                 messagesDiv.scrollTop = messagesDiv.scrollHeight;
+                
+                // Restart countdown timers for all messages
+                messages.forEach(msg => {
+                    const deleteTime = AUTO_DELETE_TIMES[msg.autoDelete] || AUTO_DELETE_TIMES['1h'];
+                    const expiresAt = msg.timestamp + deleteTime;
+                    if (expiresAt > Date.now()) {
+                        startMessageCountdown(msg.id, msg.timestamp, msg.autoDelete);
+                    }
+                });
             }
         }
     }
@@ -1280,6 +1410,20 @@ setInterval(() => {
 // Check URL params for auto join
 function checkURLParams() {
     const urlParams = new URLSearchParams(window.location.search);
+    const error = urlParams.get('error');
+    
+    // Kiểm tra lỗi từ QR token
+    if (error === 'qr_expired') {
+        const lang = getCurrentLanguage();
+        showStatus(t('chat.qrExpired', lang), 'error');
+        return;
+    }
+    if (error === 'invalid_token') {
+        const lang = getCurrentLanguage();
+        showStatus(t('chat.invalidQRToken', lang), 'error');
+        return;
+    }
+    
     let roomCode = urlParams.get('room');
     let password = urlParams.get('password');
     
@@ -1364,4 +1508,5 @@ checkURLParams();
 if (state.currentView === 'setup') {
     render();
 }
+
 
