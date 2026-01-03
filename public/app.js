@@ -190,13 +190,19 @@ function render() {
     const root = document.getElementById('root');
     
     if (state.currentView === 'setup') {
-        // Load danh sách phòng đã tham gia
+        // Load danh sách phòng đã tham gia (tránh duplicate)
         const allTokens = getAllUserTokens();
         let roomsList = [];
+        const seenRooms = new Set(); // Track room codes đã thấy
+        
         allTokens.forEach(token => {
             const userRooms = loadUserRooms(token);
             userRooms.forEach(room => {
-                roomsList.push({ ...room, token });
+                // Chỉ thêm room nếu chưa thấy roomCode này
+                if (!seenRooms.has(room.roomCode)) {
+                    seenRooms.add(room.roomCode);
+                    roomsList.push({ ...room, token });
+                }
             });
         });
         const lang = getCurrentLanguage();
@@ -615,65 +621,84 @@ window.showQRScanner = function() {
     window.qrScannerStream = null;
     
     // Thử sử dụng camera để quét QR
-    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia && typeof jsQR !== 'undefined') {
-        const video = document.getElementById('qr-video');
-        const canvas = document.getElementById('qr-canvas');
-        const scanningIndicator = document.getElementById('qr-scanning-indicator');
-        
-        navigator.mediaDevices.getUserMedia({ 
-            video: { 
-                facingMode: 'environment',
-                width: { ideal: 640 },
-                height: { ideal: 480 }
-            } 
-        })
-            .then(stream => {
-                window.qrScannerStream = stream;
-                video.srcObject = stream;
-                video.style.display = 'block';
-                scanningIndicator.style.display = 'block';
-                video.play();
-                
-                const context = canvas.getContext('2d');
-                let scanning = true;
-                
-                function scanQR() {
-                    if (!scanning) return;
-                    
-                    if (video.readyState === video.HAVE_ENOUGH_DATA) {
-                        canvas.width = video.videoWidth;
-                        canvas.height = video.videoHeight;
-                        context.drawImage(video, 0, 0, canvas.width, canvas.height);
-                        
-                        const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
-                        const code = jsQR(imageData.data, imageData.width, imageData.height);
-                        
-                        if (code) {
-                            scanning = false;
-                            // Tìm thấy QR code
-                            const url = code.data;
-                            closeQRScanner();
-                            processQRFromURL(url);
-                        }
-                    }
-                    
-                    if (scanning) {
-                        requestAnimationFrame(scanQR);
-                    }
-                }
-                
-                video.addEventListener('loadedmetadata', () => {
-                    scanQR();
-                });
+    const video = document.getElementById('qr-video');
+    const canvas = document.getElementById('qr-canvas');
+    const scanningIndicator = document.getElementById('qr-scanning-indicator');
+    
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        // Kiểm tra jsQR có sẵn không
+        if (typeof jsQR === 'undefined') {
+            console.log('jsQR library not loaded');
+            video.style.display = 'none';
+            scanningIndicator.style.display = 'none';
+        } else {
+            // Request camera access
+            navigator.mediaDevices.getUserMedia({ 
+                video: { 
+                    facingMode: 'environment',
+                    width: { ideal: 640 },
+                    height: { ideal: 480 }
+                } 
             })
-            .catch(err => {
-                console.log('Camera access denied or not available:', err);
-                document.getElementById('qr-video').style.display = 'none';
-                document.getElementById('qr-scanning-indicator').style.display = 'none';
-            });
+                .then(stream => {
+                    window.qrScannerStream = stream;
+                    video.srcObject = stream;
+                    video.style.display = 'block';
+                    scanningIndicator.style.display = 'block';
+                    
+                    // Wait for video to be ready
+                    video.onloadedmetadata = () => {
+                        video.play();
+                        
+                        const context = canvas.getContext('2d');
+                        let scanning = true;
+                        
+                        function scanQR() {
+                            if (!scanning || !video || video.readyState !== video.HAVE_ENOUGH_DATA) {
+                                if (scanning) {
+                                    requestAnimationFrame(scanQR);
+                                }
+                                return;
+                            }
+                            
+                            try {
+                                canvas.width = video.videoWidth;
+                                canvas.height = video.videoHeight;
+                                context.drawImage(video, 0, 0, canvas.width, canvas.height);
+                                
+                                const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+                                const code = jsQR(imageData.data, imageData.width, imageData.height);
+                                
+                                if (code && code.data) {
+                                    scanning = false;
+                                    // Tìm thấy QR code
+                                    const url = code.data;
+                                    closeQRScanner();
+                                    processQRFromURL(url);
+                                    return;
+                                }
+                            } catch (error) {
+                                console.error('Error scanning QR:', error);
+                            }
+                            
+                            if (scanning) {
+                                requestAnimationFrame(scanQR);
+                            }
+                        }
+                        
+                        // Start scanning
+                        scanQR();
+                    };
+                })
+                .catch(err => {
+                    console.log('Camera access denied or not available:', err);
+                    video.style.display = 'none';
+                    scanningIndicator.style.display = 'none';
+                });
+        }
     } else {
-        document.getElementById('qr-video').style.display = 'none';
-        document.getElementById('qr-scanning-indicator').style.display = 'none';
+        video.style.display = 'none';
+        scanningIndicator.style.display = 'none';
     }
 };
 
@@ -1005,10 +1030,13 @@ function connectToRoom() {
             if (!existingMsg) {
                 messagesDiv.innerHTML += renderMessage(messageData);
                 messagesDiv.scrollTop = messagesDiv.scrollHeight;
+                
+                // Start countdown timer cho message mới
+                startMessageCountdown(messageData.id, messageData.timestamp, messageData.autoDelete);
             }
         }
         
-        // Auto delete after time
+        // Auto delete after time (backup)
         setTimeout(() => {
             const msgElement = document.querySelector(`[data-id="${messageData.id}"]`);
             if (msgElement) {
@@ -1088,8 +1116,10 @@ window.viewQR = async function() {
                         <h3><i class="fas fa-qrcode"></i> ${t('common.viewQR', lang)}</h3>
                         <button class="modal-close" onclick="this.closest('.modal-overlay').remove()"><i class="fas fa-times"></i></button>
                     </div>
-                    <div class="modal-body" style="text-align: center;">
-                        <img src="${data.qrCode}" alt="QR Code" style="max-width: 100%; border-radius: 8px;">
+                    <div class="modal-body" style="text-align: center; padding: 20px;">
+                        <div style="display: flex; justify-content: center; margin-bottom: 15px;">
+                            <img src="${data.qrCode}" alt="QR Code" style="max-width: 100%; max-width: 300px; height: auto; border-radius: 8px; border: 1px solid #E1E8ED;">
+                        </div>
                         <p style="margin-top: 15px; color: #666; font-size: 14px;">${t('common.qrExpiresIn', lang)} <span id="qrModalCountdown"></span></p>
                     </div>
                 </div>
@@ -1343,14 +1373,26 @@ function showStatus(message, type) {
     }
 }
 
+// Store active countdown timers to avoid duplicates
+const activeCountdowns = new Set();
+
 // Start countdown timer for a message
 function startMessageCountdown(messageId, timestamp, autoDelete) {
+    // Tránh duplicate countdown
+    if (activeCountdowns.has(messageId)) {
+        return;
+    }
+    activeCountdowns.add(messageId);
+    
     const deleteTime = AUTO_DELETE_TIMES[autoDelete] || AUTO_DELETE_TIMES['1h'];
     const expiresAt = timestamp + deleteTime;
     
     function updateCountdown() {
         const countdownEl = document.getElementById(`countdown-${messageId}`);
-        if (!countdownEl) return;
+        if (!countdownEl) {
+            activeCountdowns.delete(messageId);
+            return;
+        }
         
         const now = Date.now();
         const timeLeft = Math.max(0, expiresAt - now);
@@ -1371,6 +1413,7 @@ function startMessageCountdown(messageId, timestamp, autoDelete) {
             setTimeout(updateCountdown, 1000);
         } else {
             // Message expired, remove it
+            activeCountdowns.delete(messageId);
             const msgElement = document.querySelector(`[data-id="${messageId}"]`);
             if (msgElement) {
                 msgElement.remove();
@@ -1394,7 +1437,8 @@ setInterval(() => {
                 messagesDiv.innerHTML = messages.map(msg => renderMessage(msg)).join('');
                 messagesDiv.scrollTop = messagesDiv.scrollHeight;
                 
-                // Restart countdown timers for all messages
+                // Restart countdown timers for all messages (clear old timers first)
+                activeCountdowns.clear();
                 messages.forEach(msg => {
                     const deleteTime = AUTO_DELETE_TIMES[msg.autoDelete] || AUTO_DELETE_TIMES['1h'];
                     const expiresAt = msg.timestamp + deleteTime;
